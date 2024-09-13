@@ -19,7 +19,6 @@ class DASMockBuilder extends DASSdkBuilder {
 
   override def dasType: String = "mock"
 
-  override def build(options: Map[String, String])(implicit settings: RawSettings): DASSdk =
-    new DASMock(options)
+  override def build(options: Map[String, String])(implicit settings: RawSettings): DASSdk = new DASMock(options)
 
 }
