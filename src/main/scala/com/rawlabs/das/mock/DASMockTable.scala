@@ -21,6 +21,11 @@ class DASMockTable(maxRows: Int) extends DASTable with StrictLogging {
 
   override def getRelSize(quals: Seq[Qual], columns: Seq[String]): (Int, Int) = (maxRows, 200)
 
+  /**
+   * The DASMockStorage wraps a TreeMap that stores the rows of the table. The tree map is already sorted by the key column.
+   * Therefore, the table can provide the sorted results without any additional sorting. Can sort states that here.
+   * If the TreeMap had a performant way to reverse the order, the table could also support reversed sorting by removing the !k.getIsReversed condition.
+   */
   override def canSort(sortKeys: Seq[SortKey]): Seq[SortKey] = Seq.empty
 
   override def getPathKeys: Seq[(Seq[String], Int)] = {
@@ -35,6 +40,24 @@ class DASMockTable(maxRows: Int) extends DASTable with StrictLogging {
       verbose: Boolean
   ): Seq[String] = Seq.empty
 
+  /**
+   * A SELECT statement is executed by calling the execute method.
+   * Quals, colums, sortKeys, limit help to filter, project, sort and limit the results.
+   * Implementing Quals, colums and limit is optional, but they can be useful to optimize the query execution.
+   * Example: lets assume that this execute method calls an API that supports filtering, projection and limiting.
+   * If the params are ignored, the API will return all the rows in the table and postgres will do the filtering, projection and limiting.
+   * If the params are used and propagated to the backend of the API,
+   * the results will be filtered, projected and limited, and the data volume transferred will be minimized.
+   * If sortKeys are not empty, the execute method **has to** return the results sorted by the keys in the same order as the keys in the sortKeys param, postgres won't do it.
+   * sortKeys are correlated to canSort method. Depending on what canSort returns, this param will either contain the keys or be empty.
+   * @param quals - Qualifiers for filtering the rows
+   * @param columns - Columns to project
+   * @param maybeSortKeys - Sort keys. The sort keys are correlated to canSort method. Depending on what canSort returns, this param will either contain the keys or be empty.
+   *                      If this param has values, then the execute method **has to** return the results sorted by the keys in the same order as the keys in the sortKeys param,
+   *                      postgres will assume that the results are sorted.
+   * @param maybeLimit - Limit the number of rows returned
+   * @return
+   */
   override def execute(
       quals: Seq[Qual],
       columns: Seq[String],

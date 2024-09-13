@@ -6,7 +6,7 @@ underlying data model.
 ## Prerequisites
 
 - PostgreSQL 13+
-- [multicorn2](https://github.com/raw-labs/multicorn2)
+- [multicorn2 RAW Labs Fork](https://github.com/raw-labs/multicorn2)
 - [multicorn-das](https://github.com/raw-labs/multicorn-das)
 
 ## DASMock
@@ -25,7 +25,8 @@ After setting up the environment and building the project, go to `External Libra
 Open DASSServerMain and run the main method.
 
 ## Interact with the DASMock FDW
-```DROP SERVER multicorn_das CASCADE;
+```
+DROP SERVER multicorn_das CASCADE;
 CREATE SERVER multicorn_das FOREIGN DATA WRAPPER multicorn OPTIONS (
     wrapper 'multicorn_das.DASFdw',
     das_url 'localhost:50051',

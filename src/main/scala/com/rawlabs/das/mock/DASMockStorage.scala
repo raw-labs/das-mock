@@ -16,23 +16,28 @@ import com.rawlabs.protocol.das.Row
 
 import scala.collection.mutable;
 
+// all methods are synchronized to ensure thread safety
+// alternatively one could use immutable data structures
 class DASMockStorage(
-    val key: String,
-    private val treeMap: mutable.TreeMap[String, Row] = new mutable.TreeMap[String, Row]()
+    val key: String
 ) {
-  def add(row: Row): Row = {
+  private val treeMap: mutable.TreeMap[String, Row] = new mutable.TreeMap[String, Row]()
+  private val treeMapLock = new Object
+
+  def add(row: Row): Row = treeMapLock.synchronized {
     treeMap.put(row.getDataMap.get(key).getInt.getV.toString, row)
     row
   }
 
-  def update(rowId: String, row: Row): Row = {
+  def update(rowId: String, row: Row): Row = treeMapLock.synchronized {
     treeMap.put(rowId, row)
     row
   }
 
-  def remove(rowId: String): Unit = treeMap.remove(rowId)
+  def remove(rowId: String): Unit = treeMapLock.synchronized(treeMap.remove(rowId))
 
-  def size: Int = treeMap.size
+  def size: Int = treeMapLock.synchronized(treeMap.size)
 
-  def iterator: Iterator[Row] = treeMap.valuesIterator
+  // clone the values to avoid concurrent modification
+  def iterator: Iterator[Row] = treeMapLock.synchronized(treeMap.clone().valuesIterator)
 }

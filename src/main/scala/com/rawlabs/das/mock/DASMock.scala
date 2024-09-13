@@ -17,14 +17,21 @@ import com.rawlabs.protocol.das.{ColumnDefinition, FunctionDefinition, TableDefi
 import com.rawlabs.protocol.raw.{IntType, StringType, Type}
 import com.typesafe.scalalogging.StrictLogging
 
-class DASMock extends DASSdk with StrictLogging {
+/**
+ * @param options - are passed through the FDW definiton e.g.:
+ *                CREATE SERVER multicorn_das FOREIGN DATA WRAPPER multicorn OPTIONS (
+ *                  wrapper 'multicorn_das.DASFdw',
+ *                  das_url 'localhost:50051',
+ *                  das_type 'mock',
+ *                  option1 'value1',
+ *                  option2 'value2'
+ *                );
+ */
+class DASMock(options: Map[String, String]) extends DASSdk with StrictLogging {
+
+  options.keys.foreach(key => logger.info(s"Option: $key = ${options(key)}"))
 
   private val dasMockStorage = new DASMockStorage("column1")
-
-  def this(options: Map[String, String]) = {
-    this()
-    options.keys.foreach(key => logger.info(s"Option: $key = ${options(key)}"))
-  }
 
   override def tableDefinitions: Seq[TableDefinition] = {
     Seq(
