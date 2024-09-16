@@ -76,26 +76,25 @@ class DASMockInMemoryTable(private val dasMockStorage: DASMockStorage) extends D
       private val iterator = dasMockStorage.iterator
       private var currentIndex: Int = 1
       private var currentRow: Option[Row] = None
-      private var nextCalled: Boolean = true
       private var hasNextValue: Boolean = false
       override def close(): Unit = {}
 
       // hasNext is called multiple times, before next is called
       override def hasNext: Boolean = {
-        if (nextCalled) {
+        if (currentRow.isEmpty) {
           currentRow = getNextRow(quals, iterator)
           hasNextValue = maybeLimit match {
             case Some(limit) => currentRow.isDefined && currentIndex <= Math.min(dasMockStorage.size, limit)
             case None => currentRow.isDefined && currentIndex <= dasMockStorage.size
           }
-          nextCalled = false
         }
         hasNextValue
       }
       override def next(): Row = {
         currentIndex += 1
-        nextCalled = true
-        currentRow.get
+        val result = currentRow.get
+        currentRow = None
+        result
       }
     }
   }
