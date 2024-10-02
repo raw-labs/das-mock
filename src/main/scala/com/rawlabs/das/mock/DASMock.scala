@@ -13,11 +13,26 @@
 package com.rawlabs.das.mock
 
 import com.rawlabs.das.sdk._
-import com.rawlabs.protocol.das.{ColumnDefinition, FunctionDefinition, Qual, Row, SortKey, TableDefinition, TableId}
-import com.rawlabs.protocol.raw.{IntType, StringType, Type, Value, ValueInt, ValueString}
+import com.rawlabs.protocol.das.{ColumnDefinition, FunctionDefinition, TableDefinition, TableId}
+import com.rawlabs.protocol.raw.{IntType, StringType, Type}
 import com.typesafe.scalalogging.StrictLogging
 
-class DASMock extends DASSdk with StrictLogging {
+/**
+ * @param options - are passed through the FDW definiton e.g.:
+ *                CREATE SERVER multicorn_das FOREIGN DATA WRAPPER multicorn OPTIONS (
+ *                  wrapper 'multicorn_das.DASFdw',
+ *                  das_url 'localhost:50051',
+ *                  das_type 'mock',
+ *                  option1 'value1',
+ *                  option2 'value2'
+ *                );
+ */
+class DASMock(options: Map[String, String]) extends DASSdk with StrictLogging {
+
+  options.keys.foreach(key => logger.info(s"Option: $key = ${options(key)}"))
+
+  private val dasMockStorage = new DASMockStorage("column1")
+
   override def tableDefinitions: Seq[TableDefinition] = {
     Seq(
       TableDefinition
@@ -63,6 +78,28 @@ class DASMock extends DASSdk with StrictLogging {
             .build()
         )
         .setStartupCost(1000)
+        .build(),
+      TableDefinition
+        .newBuilder()
+        .setTableId(TableId.newBuilder().setName("in_memory"))
+        .setDescription("A mock in memory table")
+        .addColumns(
+          ColumnDefinition
+            .newBuilder()
+            .setName("column1")
+            .setDescription("The first column - int")
+            .setType(Type.newBuilder().setInt(IntType.newBuilder()).build())
+            .build()
+        )
+        .addColumns(
+          ColumnDefinition
+            .newBuilder()
+            .setName("column2")
+            .setDescription("The second column - string")
+            .setType(Type.newBuilder().setString(StringType.newBuilder()).build())
+            .build()
+        )
+        .setStartupCost(2000)
         .build()
     )
   }
@@ -73,67 +110,10 @@ class DASMock extends DASSdk with StrictLogging {
     name match {
       case "big" => Some(new DASMockTable(2000000000))
       case "small" => Some(new DASMockTable(100))
+      case "in_memory" => Some(new DASMockInMemoryTable(dasMockStorage))
       case _ => None
     }
   }
 
   override def getFunction(name: String): Option[DASFunction] = None
-}
-
-class DASMockTable(maxRows: Int) extends DASTable with StrictLogging {
-
-  override def getRelSize(quals: Seq[Qual], columns: Seq[String]): (Int, Int) = (maxRows, 200)
-
-  override def canSort(sortKeys: Seq[SortKey]): Seq[SortKey] = Seq.empty
-
-  override def getPathKeys: Seq[(Seq[String], Int)] = {
-    Seq((Seq("column1"), 1))
-  }
-
-  override def explain(
-      quals: Seq[Qual],
-      columns: Seq[String],
-      maybeSortKeys: Option[Seq[SortKey]],
-      maybeLimit: Option[Long],
-      verbose: Boolean
-  ): Seq[String] = Seq.empty
-
-  override def execute(
-      quals: Seq[Qual],
-      columns: Seq[String],
-      maybeSortKeys: Option[Seq[SortKey]],
-      maybeLimit: Option[Long]
-  ): DASExecuteResult = {
-    logger.info(s"Executing query with quals: $quals, columns: $columns, sortKeys: $maybeSortKeys, limit: $maybeLimit")
-
-    new DASExecuteResult {
-      private var currentIndex: Int = 1
-
-      override def close(): Unit = {}
-
-      override def hasNext: Boolean = {
-        maybeLimit match {
-          case Some(limit) => currentIndex <= Math.min(maxRows, limit)
-          case None => currentIndex <= maxRows
-        }
-      }
-
-      override def next(): Row = {
-        if (!hasNext) throw new NoSuchElementException("No more elements")
-
-        val row = Row
-          .newBuilder()
-          .putData("column1", Value.newBuilder().setInt(ValueInt.newBuilder().setV(currentIndex).build()).build())
-          .putData(
-            "column2",
-            Value.newBuilder().setString(ValueString.newBuilder().setV(s"row_tmp_$currentIndex").build()).build()
-          )
-          .build()
-
-        currentIndex += 1
-        row
-      }
-    }
-  }
-
 }
