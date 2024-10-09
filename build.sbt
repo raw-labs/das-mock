@@ -212,5 +212,5 @@ lazy val docker = (project in file("docker"))
   .settings(
     buildSettings,
     dockerSettings,
-    libraryDependencies += "com.raw-labs" %% "das-server-scala" % "0.1.0" % "compile->compile;test->test"
+    libraryDependencies += "com.raw-labs" %% "das-server-scala" % "0.1.5" % "compile->compile;test->test"
   )
